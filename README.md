@@ -1,0 +1,2 @@
+# demochain
+A democratic blockchain
