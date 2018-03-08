@@ -1,8 +1,8 @@
 import sys
 
-from abci.wire import hex2bytes, decode_big_endian, encode_big_endian
-from abci.server import ABCIServer
-from abci.reader import BytesBuffer
+from wire import hex2bytes, decode_big_endian, encode_big_endian
+from server import ABCIServer
+from reader import BytesBuffer
 
 class CounterApplication():
 

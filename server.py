@@ -4,9 +4,9 @@ import sys
 import logging
 import pdb
 
-from .wire import decode_varint, encode
-from .reader import BytesBuffer
-from .msg import Decoder, message_types, message_names
+from wire import decode_varint, encode
+from reader import BytesBuffer
+from msg import Decoder, message_types, message_names
 
 # hold the asyncronous state of a connection
 # ie. we may not get enough bytes on one read to decode the message
