@@ -1,26 +1,73 @@
 import sys
+import pdb
 
 from wire import hex2bytes, decode_big_endian, encode_big_endian
 from server import ABCIServer
 from reader import BytesBuffer
 
-class CounterApplication():
+blockchain = {
+    'height': 1,
+    'uncommited_tx_count': 0,
+    'block_0_trans_1_blockchain_parameters': {
+        'data': 'def strcode_get_param(params,state):\n key = params[0]\n return state.get(key,None),state\n' +
+              'def strcode_set_param(params,state):\n'+
+              ' key,val,proof = params\n'+
+              ' result = call_address(state.get("param_set_permission_addr",None),'+
+                  '"strcode_pset_permission",[proof,])\n'+
+              ' if result:\n'+
+              '  state.update({key:val})\n'+
+              ' return None,state',
+        'memory': {'param_set_permission_addr': 'block_0_trans_2_pset_permission',
+                   'check_tx_addr': 'block_0_trans_3_check_tx',
+                   'deliver_tx_addr': 'block_0_trans_4_deliver_tx'}},
+    'block_0_trans_2_pset_permission': {
+        'data': 'def strcode_pset_permission(params,state):\n proof = params[0]\n print("genesis pset_permission called: ",proof)\n return True,["None",]',
+        'memory': ['None',]},
+    'block_0_trans_3_check_tx': {
+        'data': 'def strcode_check_tx(params,state):\n tx = params[0]\n print("genesis check_tx called: ",tx)\n return True,["None",]',
+        'memory': ['None',]},
+    'block_0_trans_4_deliver_tx': {
+        'data': 'def strcode_deliver_tx(params,state):\n'+
+                ' tx = eval(params[0].decode("utf-8"))\n'+
+                ' print("genesis deliver_tx called: ",tx)\n'+
+                ' address=tx.get("address",None)\n'+
+                ' data=tx.get("data",None)\n'+
+                ' if data is not None:\n'+
+                '  address = deploy_address(address,data)\n'+
+                ' function=tx.get("function",None)\n'+
+                ' params=tx.get("params",None)\n'+
+                ' if function is not None:\n'+
+                '  call_address(address,function,params)\n'+
+                ' return True,["None",]',
+        'memory': ['None',]}}
 
-    def __init__(self):
-#        sys.exit("The python example is out of date.  Upgrading the Python examples is currently left as an exercise to you.")
-        self.hashCount = 0
-        self.txCount = 0
-        self.serial = False
-        self.height = 1
+def deploy_address(address,data):
+    full_addr = 'block_'+str(blockchain['height'])+'_trans_'+str(blockchain['uncommited_tx_count'])+'_'+address
+    blockchain.update({full_addr:{'data':data,'memory':['None',]}})
+    blockchain['uncommited_tx_count'] += 1
+    return full_addr
+
+def call_address(address,function,params):
+    function_dict = blockchain.get(address,None)
+    function_def = function_dict.get('data',None)
+    function_state = function_dict.get('memory',None)
+    exec(function_def)
+    result,new_state = eval(function+'('+str(params)+','+str(function_state)+')')
+    function_dict.update({'memory': new_state})
+    blockchain.update({address: function_dict})
+    return result
+
+class CounterApplication():
 
     def echo(self, msg):
         return msg, 0
 
     def info(self,data):
-        return {4:{1:bytearray([123,34,115,105,122,101,34,58,48,125])}}#["hashes:%d, txs:%d" % (self.hashCount, self.txCount)], 0
+        return {4:{1:bytearray([123,34,115,105,122,101,34,58,48,125])}}
 
     def query(self,data):
-        return {7:{3:data[1],5:bytearray('trust me'.encode("utf8"))}}
+        value = bytearray(str(blockchain),"utf-8")
+        return {7:{4:value,5:bytearray('trust me'.encode("utf8"))}}
         
     def init_chain(self,data):
         return {6:None}
@@ -32,55 +79,24 @@ class CounterApplication():
         return {11:None}
 
     def commit(self,data):
-        return {12:{2:(bytearray(20)+encode_big_endian(self.height))[-20:]}}
+        if blockchain['uncommited_tx_count']>0:
+            blockchain['height'] += 1
+            blockchain['uncommited_tx_count'] = 0
+        return {12:{2:(bytearray(20)+encode_big_endian(blockchain['height']))[-20:]}}
 
-    def set_option(self, key, value):
-        if key == "serial" and value == "on":
-            self.serial = True
-        return 0
-
-    def deliver_tx(self,data): #(self, txBytes):
-#        if self.serial:
-#            txByteArray = bytearray(txBytes)
-#            if len(txBytes) >= 2 and txBytes[:2] == "0x":
-#                txByteArray = hex2bytes(txBytes[2:])
-#            txValue = decode_big_endian(
-#                BytesBuffer(txByteArray), len(txBytes))
-#            if txValue != self.txCount:
-#                return None, 6
-#        self.txCount += 1
-#        return None, 0
-        self.height+=1
+    def deliver_tx(self,data):
+        addr = call_address('block_0_trans_1_blockchain_parameters',
+            'strcode_get_param',["deliver_tx_addr",])
+        result = call_address(addr,'strcode_deliver_tx',[data[1],])
+        print("deliver_tx returns ",result)
         return {10:None}
 
-    def check_tx(self,data): #(self, txBytes="hello"):
-#        if self.serial:
-#            txByteArray = bytearray(txBytes)
-#            if len(txBytes) >= 2 and txBytes[:2] == "0x":
-#                txByteArray = hex2bytes(txBytes[2:])
-#            txValue = decode_big_endian(
-#                BytesBuffer(txByteArray), len(txBytes))
-#            if txValue < self.txCount:
-#                return 6
+    def check_tx(self,data):
+        checktxaddr = call_address('block_0_trans_1_blockchain_parameters',
+            'strcode_get_param',["check_tx_addr",])
+        result = call_address(checktxaddr,'strcode_check_tx',[data[1],])
+        print("check_tx returns ",result)
         return {9:None}
-
-#    def commit(self):
-#        self.hashCount += 1
-#        if self.txCount == 0:
-#            return "", 0
-##        h = encode_big_endian(self.txCount, 8)
-#        h = encode_big_endian(self.txCount)
-#        h.reverse()
-#        return h.decode(), 0
-
-    def add_listener(self):
-        return 0
-
-    def rm_listener(self):
-        return 0
-
-    def event(self):
-        return
 
 
 if __name__ == '__main__':

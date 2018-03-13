@@ -35,9 +35,9 @@ def decode_header(reader):
     return req_num, type_num, length
 
 def encode_big_endian(i):
-    if i < 256:
+    if i < 128:
         return bytearray([i])
-    return encode_big_endian(i // 256) + bytearray([i % 256])
+    return bytearray([(i % 128)+128]) + encode_big_endian(i // 128)
 
 
 def decode_big_endian(reader, size):

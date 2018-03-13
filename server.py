@@ -27,7 +27,7 @@ class Connection():
         data = this.fd.recv(1024)
         if not data:  # what about len(data) == 0
             raise IOError("dead connection")
-        print("recv",list(data))
+#        print("recv",list(data))
         this.recBuf.write(data)
 
     def send(self,buf):
@@ -107,7 +107,7 @@ class ABCIServer():
                 d = conn.decoder.decode(message_types,conn.msgLength)
                 req_type = list(d)[0]
                 req_args = d[req_type]
-                print("recv", req_args)
+#                print("recv", req_args)
                 req_type = message_names[req_type]
 
                 # done decoding message
@@ -117,8 +117,10 @@ class ABCIServer():
                 # send only after flush
                 if req_type == "flush":
                     for enc in self.enc:
-                        print("send",list(enc))
-                        conn.send(bytes([1,len(enc)])+enc)
+                        length = len(enc)
+                        len_bytes = length.to_bytes((length.bit_length() + 7) // 8, 'big')
+                        header = bytes([len(len_bytes)])+len_bytes
+                        conn.send(header+enc)
                     # send flush
                     conn.send(bytes([1,2,26,0]))
                     self.enc=[]
@@ -126,7 +128,7 @@ class ABCIServer():
                 else:
                     req_f = getattr(conn.app, req_type)
                     res = req_f(req_args)
-                    print("send",res)
+#                    print("send",res)
                     self.enc += (encode(res),)
 
             except IOError as e:
