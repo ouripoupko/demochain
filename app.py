@@ -13,32 +13,33 @@ blockchain = {
               'def strcode_set_param(params,state):\n'+
               ' key,val,proof = params\n'+
               ' result = call_address(state.get("param_set_permission_addr",None),'+
-                  '"strcode_pset_permission",[proof,])\n'+
+                  '"strcode_pset_permission",params)\n'+
               ' if result:\n'+
               '  state.update({key:val})\n'+
-              ' return None,state',
+              ' return result,state',
         'memory': {'param_set_permission_addr': 'block_0_trans_2_pset_permission',
                    'check_tx_addr': 'block_0_trans_3_check_tx',
                    'deliver_tx_addr': 'block_0_trans_4_deliver_tx'}},
     'block_0_trans_2_pset_permission': {
-        'data': 'def strcode_pset_permission(params,state):\n proof = params[0]\n print("genesis pset_permission called: ",proof)\n return True,["None",]',
+        'data': 'def strcode_pset_permission(params,state):\n key,val,proof = params\n print("genesis pset_permission called")\n return True,["None",]',
         'memory': ['None',]},
     'block_0_trans_3_check_tx': {
-        'data': 'def strcode_check_tx(params,state):\n tx = params[0]\n print("genesis check_tx called: ",tx)\n return True,["None",]',
+        'data': 'def strcode_check_tx(params,state):\n tx = params[0]\n print("genesis check_tx called")\n return True,["None",]',
         'memory': ['None',]},
     'block_0_trans_4_deliver_tx': {
         'data': 'def strcode_deliver_tx(params,state):\n'+
                 ' tx = eval(params[0].decode("utf-8"))\n'+
-                ' print("genesis deliver_tx called: ",tx)\n'+
+                ' print("genesis deliver_tx called")\n'+
                 ' address=tx.get("address",None)\n'+
                 ' data=tx.get("data",None)\n'+
                 ' if data is not None:\n'+
                 '  address = deploy_address(address,data)\n'+
                 ' function=tx.get("function",None)\n'+
                 ' params=tx.get("params",None)\n'+
+                ' reply = True\n'+
                 ' if function is not None:\n'+
-                '  call_address(address,function,params)\n'+
-                ' return True,["None",]',
+                '  reply = call_address(address,function,params)\n'+
+                ' return reply,["None",]',
         'memory': ['None',]}}
 
 def deploy_address(address,data):
@@ -49,12 +50,14 @@ def deploy_address(address,data):
 
 def call_address(address,function,params):
     function_dict = blockchain.get(address,None)
-    function_def = function_dict.get('data',None)
-    function_state = function_dict.get('memory',None)
-    exec(function_def)
-    result,new_state = eval(function+'('+str(params)+','+str(function_state)+')')
-    function_dict.update({'memory': new_state})
-    blockchain.update({address: function_dict})
+    result = None
+    if function_dict is not None:
+        function_def = function_dict.get('data',None)
+        function_state = function_dict.get('memory',None)
+        exec(function_def)
+        result,new_state = eval(function+'('+str(params)+','+str(function_state)+')')
+        function_dict.update({'memory': new_state})
+        blockchain.update({address: function_dict})
     return result
 
 class CounterApplication():
