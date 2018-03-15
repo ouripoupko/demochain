@@ -37,15 +37,21 @@ if __name__ == '__main__':
     voting = ('def voting_init(params,state):\\n'+
               ' return True,{}\\n'+
               'def strcode_pset_permission(params,state):\\n'+
+              ' print(\\"strcode_pset_permission\\")\\n'+
               ' key,val,proof = params\\n'+
               ' data = key+val\\n'+
               ' community = call_address(\\"block_1_trans_0_community\\",\\"get_community\\",[None,])\\n'+
               ' counter = 0\\n'+
+              ' print(\\"before if\\")\\n'+
               ' if isinstance(proof,dict):\\n'+
+              '  print(\\"is dict\\")\\n'+
               '  for key in community:\\n'+
+              '   print(\\"key:\\",key)\\n'+
               '   val = proof.get(key,None)\\n'+
               '   if val is not None:\\n'+
+              '    print(\\"val: \\",val)\\n'+
               '    if val == data+key:\\n'+
+              '     print(\\"data:\\",data)\\n'+
               '     counter += 1\\n'+
               ' thresh = len(community)//2\\n'+
               ' return counter>thresh,state\\n'+
@@ -53,11 +59,12 @@ if __name__ == '__main__':
               ' key,val,persona = params\\n'+
               ' signature = call_address(persona,\\"sign_tx\\",[key,val])\\n'+
               ' if signature is not None:\\n'+
-              '  stored = state.get(key+val,[])\\n'+
-              '  stored.append(signature)\\n'+
+              '  stored = state.get(key+val,{})\\n'+
+              '  stored.update({persona:signature})\\n'+
               '  state.update({key+val:stored})\\n'+
               ' return None,state\\n'+
               'def commit_block0_change(params,state):\\n'+
+              ' print(\\"commit_block0_change\\")\\n'+
               ' sigs = state.get(params[0]+params[1],None)\\n'+
               ' if sigs is not None:\\n'+
               '  call_address(\\"block_0_trans_1_blockchain_parameters\\",\\"strcode_set_param\\",(params[0],params[1],sigs))\\n'+
