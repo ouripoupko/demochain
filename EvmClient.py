@@ -43,12 +43,23 @@ contract Community {\n\
 }'
     community_str = '608060405234801561001057600080fd5b50610223806100206000396000f30060806040526004361061004c576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633bf47e8614610051578063b4bb3a3d146100bd575b600080fd5b34801561005d57600080fd5b50610066610100565b6040518080602001828103825283818151815260200191508051906020019060200280838360005b838110156100a957808201518184015260208101905061008e565b505050509050019250505060405180910390f35b3480156100c957600080fd5b506100fe600480360381019080803573ffffffffffffffffffffffffffffffffffffffff16906020019092919050505061018e565b005b6060600080548060200260200160405190810160405280929190818152602001828054801561018457602002820191906000526020600020905b8160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001906001019080831161013a575b5050505050905090565b60008190806001815401808255809150509060018203906000526020600020016000909192909190916101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050505600a165627a7a72305820bb9c4f06c8dc95c6b43906f2b4b23d3a217be029ce1097c6e43dde3ea3c100eb0029'
 
-    persona = ('def register_persona(params,state):\\n'+
-               ' call_address(\\"block_1_trans_0_community\\",\\"register_to_community\\",params)\\n'+
-               ' return True,params\\n'+
-               'def sign_tx(params,state):\\n'+
-               ' signature = params[0]+params[1]+state[0]\\n'+
-               ' return signature,state')
+    persona = '\
+pragma solidity ^0.4.21;\n\
+\n\
+import "./Community.sol";\n\
+\n\
+contract Persona {\n\
+\n\
+    string name;\n\
+\n\
+    function Persona(string myname, uint160 comm_addr) public {\n\
+        Community c = Community(comm_addr);\n\
+        c.register_to_community(address(this));\n\
+        name = myname;\n\
+    }\n\
+}'
+    persona_prefix = '608060405234801561001057600080fd5b506040516101ff3803806101ff833981018060405281019080805182019291906020018051906020019092919050505060008190508073ffffffffffffffffffffffffffffffffffffffff1663b4bb3a3d306040518263ffffffff167c0100000000000000000000000000000000000000000000000000000000028152600401808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001915050600060405180830381600087803b1580156100e057600080fd5b505af11580156100f4573d6000803e3d6000fd5b50505050826000908051906020019061010e929190610117565b505050506101bc565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061015857805160ff1916838001178555610186565b82800160010185558215610186579182015b8281111561018557825182559160200191906001019061016a565b5b5090506101939190610197565b5090565b6101b991905b808211156101b557600081600090555060010161019d565b5090565b90565b6035806101ca6000396000f3006080604052600080fd00a165627a7a72305820af761e98613ff35eb3c2d5c3023e1dc6d00bb520ac09b39813ce85868c49de5900290000000000000000000000000000000000000000000000000000000000000040'
+
     voting = ('def voting_init(params,state):\\n'+
               ' return True,{}\\n'+
               'def strcode_pset_permission(params,state):\\n'+
@@ -84,19 +95,25 @@ contract Community {\n\
               ' if sigs is not None:\\n'+
               '  call_address(\\"block_0_trans_1_blockchain_parameters\\",\\"strcode_set_param\\",(params[0],params[1],sigs))\\n'+
               ' return True,state')
+    addr0 = '0000000000000000000000000000000000000000'
     pdb.set_trace()
     query()
     print(community)
-    commit(b'community_owner_addr'.hex(),'0000000000000000000000000000000000000000',community_str)
+    commit(b'community_owner_addr'.hex(),addr0,community_str)
     query()
+
     print(persona)
-    commit('persona_Udi',persona)
-    commit('block_2_trans_0_persona_Udi',None,'register_persona','[\\"block_2_trans_0_persona_Udi\\"]')
-    commit('persona_Ouri',persona)
-    commit('block_3_trans_0_persona_Ouri',None,'register_persona','[\\"block_3_trans_0_persona_Ouri\\"]')
-    commit('persona_Nimrod',persona)
-    commit('block_4_trans_0_persona_Nimrod',None,'register_persona','[\\"block_4_trans_0_persona_Nimrod\\"]')
+    name = 'Udi Shapiro'
+    contract = persona_prefix+int(5).to_bytes(32, byteorder='big').hex()+len(name).to_bytes(32, byteorder='big').hex()+name.encode("utf-8").hex()+int(0).to_bytes(32-len(name),'big').hex()
+    commit(b'udi_shapiro_____addr'.hex(),addr0,contract)
+    name = 'Nimrod Talmon'
+    contract = persona_prefix+int(5).to_bytes(32, byteorder='big').hex()+len(name).to_bytes(32, byteorder='big').hex()+name.encode("utf-8").hex()+int(0).to_bytes(32-len(name),'big').hex()
+    commit(b'nimrod_talmon___addr'.hex(),addr0,contract)
+    name = 'Ouri Poupko'
+    contract = persona_prefix+int(5).to_bytes(32, byteorder='big').hex()+len(name).to_bytes(32, byteorder='big').hex()+name.encode("utf-8").hex()+int(0).to_bytes(32-len(name),'big').hex()
+    commit(b'ouri_poupko_____addr'.hex(),addr0,contract)
     query()
+
     print(voting)
     commit('voting',voting,'voting_init','None')
     query()
