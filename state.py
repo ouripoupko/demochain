@@ -119,8 +119,8 @@ class Blockchain():
         self.code.update({addr3:bytes(memory)})
         result,gas,memory = vm_execute(self,Message(addr0,addr4),GenesisDeliverTxBytes)
         self.code.update({addr4:bytes(memory)})
-        result,gas,memory = vm_execute(self,Message(addr0,addr1,data=check_tx_addr_set),genesis_code)
-        result,gas,memory = vm_execute(self,Message(addr0,addr1,data=deliver_tx_addr_set),genesis_code)
+        result,gas,memory = vm_execute(self,Message(addr0,addr1,data=check_tx_addr_set),bytes(genesis_code))
+        result,gas,memory = vm_execute(self,Message(addr0,addr1,data=deliver_tx_addr_set),bytes(genesis_code))
 
     def __repr__(self):
         return str({"code":self.code,"storage":self.storage})
@@ -167,11 +167,12 @@ class Blockchain():
 
     def log(self, addr, topics, data):
         print('\n**** log ****\n')
+        print(addr,topics,data)
         return 0
 
     def create(self, msg):
         print('\n**** create ****\n')
-        return 0, 0, 0
+        return self.create_address(msg, msg.data.extract_all())
 
     def call(self, msg):
         print('\n**** call ****\n')
@@ -187,15 +188,25 @@ class Blockchain():
 
     def msg(self, inmsg):
         print('\n**** msg ****\n')
+        print("msg",inmsg.code_address)
         code = self.code.get(inmsg.code_address,None)
         return vm_execute(self,inmsg,code)
 
     def call_address(self, fromAddr, toAddr, data):
+        print("running",toAddr.hex())
         code = self.code.get(toAddr,None)
         if(code != None):
             result,gas,memory = vm_execute(self,Message(fromAddr,toAddr,data=data),code)
         return memory
         
+    def create_address(self, msg, data):
+        msg.to = utils.int_to_addr(self.nonce)
+        print("creating",msg.to.hex())
+        self.nonce += 1
+        result,gas,memory = vm_execute(self,msg,data)
+        self.code.update({msg.to:bytes(memory)})
+        return result,gas,msg.to
+    
     def check_tx(self,data):
         result = self.call_address(addr0,addr1,check_tx_addr_req)
         checktxaddr = bytes(result[12:32])
@@ -222,13 +233,9 @@ class Blockchain():
         
         # execute transaction
         if(toAddr==addr0):
-            new_address = utils.int_to_addr(self.nonce)
-            self.nonce += 1
-            result,gas,memory = vm_execute(self,Message(fromAddr,new_address),codeData)
-            self.code.update({new_address:bytes(memory)})
-            result = new_address
+            reply,gas,result = self.create_address(Message(fromAddr,toAddr),codeData)
         else:
-            result = self.call_address(fromAddr,toAddr,call_data)
+            result = self.call_address(fromAddr,toAddr,codeData)
         self.uncommited_tx_count += 1
             
         return result
